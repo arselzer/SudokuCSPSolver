@@ -27,14 +27,14 @@ public class Main {
             System.exit(1);
         }
 
-        if (!cli.hasOption("i")) {
-            helpFormatter.printHelp(args[0], options);
+        if (!cli.hasOption("instance")) {
+            helpFormatter.printHelp("java -jar " + System.getProperty("sun.java.command"), options);
+            System.exit(1);
         }
 
         String filePath = cli.getOptionValue("instance");
 
         CSPSolver solver = new CSPSolver(Path.of(filePath));
-
 
     }
 }

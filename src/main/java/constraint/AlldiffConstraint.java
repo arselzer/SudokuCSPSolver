@@ -1,11 +1,20 @@
+package constraint;
+
+import variable.Variable;
+
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * In our case, Constraint is an alldiff constraint
+ * In our case, constraint.Constraint is an alldiff constraint
  */
 public class AlldiffConstraint implements Constraint {
-    private LinkedHashSet<Variable> variables;
+    private Set<Variable> variables;
+
+    public AlldiffConstraint(Set<Variable> variables) {
+        this.variables = variables;
+    }
 
     /**
      * @return whether a constraint violation exists
@@ -24,5 +33,10 @@ public class AlldiffConstraint implements Constraint {
         }
 
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ALLDIFF (%s)", variables.stream().map(Variable::getId).collect(Collectors.toList()));
     }
 }

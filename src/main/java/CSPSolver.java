@@ -1,45 +1,28 @@
-import org.w3c.dom.Document;
-import org.xcsp.common.Utilities;
-import org.xcsp.parser.XParser;
-import org.xcsp.parser.entries.XVariables;
+import constraint.Constraint;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 
 public class CSPSolver {
+    Instance instance;
+
     public CSPSolver(Path cspFile) throws Exception {
-        Document doc = Utilities.loadDocument(cspFile.toString());
-        XParser parser = new XParser(doc);
+        XCSPReader reader = new XCSPReader(cspFile.toString());
 
-        HashSet<Variable> variables = new HashSet<>();
-        HashSet<Constraint> constraints = new HashSet<>();
-        HashMap<String, Variable> idToVariableMap = new HashMap<>();
+        instance = reader.getProblemInstance();
 
-        parser.vEntries.forEach(vEntry -> {
-            Variable variable = new Variable(vEntry.id);
-            variables.add(variable);
-            idToVariableMap.put(vEntry.id, variable);
-        });
+        System.out.println(instance);
 
-        parser.cEntries.forEach(cEntry -> {
-            LinkedHashSet<XVariables.XVar> vars = new LinkedHashSet<>();
-            cEntry.collectVars(vars);
+//        System.out.println(instance.getVariables());
+//        for (Constraint c : instance.getConstraints()) {
+//            System.out.println(c);
+//        }
+    }
 
-            System.out.println("Constraint entry:");
-            //System.out.println(cEntry);
-            System.out.println(cEntry.id);
-            System.out.println(cEntry.attributes.keySet());
-            System.out.println(cEntry.flags);
+    public void solve() {
+        // TODO
+    }
 
-            System.out.println(cEntry.classes);
-            vars.forEach(xVar -> {
-                System.out.println(xVar);
-                System.out.println(xVar.id() +" " + xVar.degree + " " + xVar.dom + " " + xVar.idPrefix() );
-                Variable variable = new Variable(xVar.id);
-                //variables.add(variable);
-            });
-        });
+    public Instance getInstance() {
+        return instance;
     }
 }
