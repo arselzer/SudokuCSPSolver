@@ -75,6 +75,38 @@ public class CSPSolver {
         return null;
     }
 
+    private boolean isPossible(int[][] grid, int positionRow, int positionColumn, int value) {
+        // Check if value is already in row (if yes then immediately return false)
+        for (int x = 0; x < grid.length; x++) {
+            if (grid[x][positionColumn] == value) {
+                return false;
+            }
+        }
+
+        // Check if value is already in column (if yes then immediately return false)
+        for (int y = 0; y < grid[positionRow].length; y++) {
+            if (grid[positionRow][y] == value) {
+                return false;
+            }
+        }
+
+        // Check if value is already in square (if yes then immediately return false)
+        int startSquareX = positionRow - (positionRow % 3);
+        int startSquareY = positionColumn - (positionColumn % 3);
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                int currentX = startSquareX + x;
+                int currentY = startSquareY + y;
+                if (grid[currentX][currentY] == value && !(currentX== positionRow && currentY == positionColumn)) {
+                    return false;
+                }
+            }
+        }
+
+        // If variable was not found, it is possible to be set here
+        return true;
+    }
+
     public void solve() {
         // TODO
     }
