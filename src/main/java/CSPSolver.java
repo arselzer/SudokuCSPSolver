@@ -1,11 +1,11 @@
 import constraint.Constraint;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import static java.util.Collections.reverseOrder;
 
 public class CSPSolver {
     Instance instance;
@@ -22,7 +22,12 @@ public class CSPSolver {
         ArrayList<int[][]> solutions = new ArrayList<>();
 
         //solveUsingBacktracking(sudokuGrid, solutions);
-        solveUsingForwardChecking(sudokuGrid, solutions);
+        //solveUsingForwardChecking(sudokuGrid, solutions);
+
+        LinkedHashMap<Integer, Integer> a = getListOfMostConstraintVariablesOrdered(sudokuGrid);
+        System.out.println(a.toString());
+        updateConstraints(a, 8, 7, -1);
+        System.out.println(a.toString());
 
         for (int[][] s : solutions) {
             printSudokuGrid(s);
@@ -200,6 +205,103 @@ public class CSPSolver {
         }
         solutions.add(getCopyOfSudokuGrid(grid));
         //printSudokuGrid(grid);
+    }
+
+    // Returns from max to min ordered list with sudoku field (row*9+column) as key and degree of constraint as value
+    private LinkedHashMap<Integer, Integer> getListOfMostConstraintVariablesOrdered(int[][] grid) {
+        HashMap<Integer, Integer> constraintVariables = new HashMap<>();
+
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                if (grid[x][y] == 0) {
+                    constraintVariables.put(x*9+y, getDegreeOfConstraint(grid, x, y));
+                }
+            }
+        }
+
+        LinkedHashMap<Integer, Integer> result = constraintVariables.entrySet().stream()
+                .sorted(reverseOrder(Map.Entry.comparingByValue()))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey, Map.Entry::getValue,
+                        (x, y) -> x,
+                        LinkedHashMap::new
+                ));
+
+        return result;
+    }
+
+    // Updates the constraint database (the LinkedHashMap) when a variable was assigned or reset
+    // -1 when variable is set and +1 when variable is reset to 0
+    private void updateConstraints(LinkedHashMap<Integer, Integer> constraints, int positionRow, int positionColumn, int change) {
+        // Update all values for row
+        for (int x = 0; x < 9; x++) {
+            int key = x*9+positionColumn;
+            if (constraints.containsKey(key)) {
+                constraints.replace(key, constraints.get(key)+change);
+            }
+        }
+
+        // Update all values for column
+        for (int y = 0; y < 9; y++) {
+            int key = positionRow*9+y;
+            if (constraints.containsKey(key)) {
+                constraints.replace(key, constraints.get(key) + change);
+            }
+        }
+
+        // Search in square
+        int startSquareX = positionRow - (positionRow % 3);
+        int startSquareY = positionColumn - (positionColumn % 3);
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                int currentX = startSquareX + x;
+                int currentY = startSquareY + y;
+                int key = currentX*9+currentY;
+                if (constraints.containsKey(key)) {
+                    constraints.replace(key, constraints.get(key), constraints.get(key) + change);
+                }
+            }
+        }
+    }
+
+    // Calculates the degree of constraint by adding values in the same row, column and square of a given field together
+    private int getDegreeOfConstraint(int[][] grid, int positionRow, int positionColumn) {
+        int degree = 0;
+
+        // Search in row
+        for (int x = 0; x < grid.length; x++) {
+            if (grid[x][positionColumn] != 0) {
+                degree++;
+            }
+        }
+
+        // Search in column
+        for (int y = 0; y < grid[0].length; y++) {
+            if (grid[positionRow][y] != 0) {
+                degree++;
+            }
+        }
+
+        // Search in square
+        int startSquareX = positionRow - (positionRow % 3);
+        int startSquareY = positionColumn - (positionColumn % 3);
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                int currentX = startSquareX + x;
+                int currentY = startSquareY + y;
+                if (grid[currentX][currentY] != 0) {
+                    degree++;
+                }
+            }
+        }
+
+        return degree;
+    }
+    
+    public void solveUsingForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
+
+        getListOfMostConstraintVariablesOrdered(grid);
+        //TODO: implement this
     }
 
     public void solve() {
