@@ -1,6 +1,7 @@
 import constraint.Constraint;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.regex.Matcher;
@@ -18,9 +19,13 @@ public class CSPSolver {
 
         printSudokuGrid(sudokuGrid);
 
+        ArrayList<int[][]> solutions = new ArrayList<>();
+        solveUsingBacktracking(sudokuGrid, solutions);
 
+        for (int[][] s : solutions) {
+            printSudokuGrid(s);
+        }
 
-        
 //        for (Constraint c : instance.getConstraints()) {
 //            System.out.println(c);
 //        }
@@ -105,6 +110,38 @@ public class CSPSolver {
 
         // If variable was not found, it is possible to be set here
         return true;
+    }
+
+    private int[][] getCopyOfSudokuGrid(int[][] grid) {
+        int[][] copy = new int[grid.length][grid[0].length];
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                copy[x][y] = grid[x][y];
+            }
+        }
+        return copy;
+    }
+
+    public void solveUsingBacktracking(int[][] grid, ArrayList<int[][]> solutions) {
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                // If the number at this point is not set yet, make a guess and check if it is possible
+                if (grid[x][y] == 0) {
+                    for (int guess = 1; guess < 10; guess++) {
+                        if (isPossible(grid, x, y, guess)) {
+                            grid[x][y] = guess;
+                            solveUsingBacktracking(grid, solutions);
+                            // Use backtracking if the choice was bad: reset the value and try again
+                            grid[x][y] = 0;
+                        }
+                    }
+                    // If all possibilities were checked, and none of them worked we are at a dead end and return
+                    return;
+                }
+            }
+        }
+        solutions.add(getCopyOfSudokuGrid(grid));
+        //printSudokuGrid(grid);
     }
 
     public void solve() {
