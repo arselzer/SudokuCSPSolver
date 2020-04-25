@@ -20,7 +20,9 @@ public class CSPSolver {
         printSudokuGrid(sudokuGrid);
 
         ArrayList<int[][]> solutions = new ArrayList<>();
-        solveUsingBacktracking(sudokuGrid, solutions);
+
+        //solveUsingBacktracking(sudokuGrid, solutions);
+        solveUsingForwardChecking(sudokuGrid, solutions);
 
         for (int[][] s : solutions) {
             printSudokuGrid(s);
@@ -134,6 +136,62 @@ public class CSPSolver {
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                         }
+                    }
+                    // If all possibilities were checked, and none of them worked we are at a dead end and return
+                    return;
+                }
+            }
+        }
+        solutions.add(getCopyOfSudokuGrid(grid));
+        //printSudokuGrid(grid);
+    }
+
+    private ArrayList<Integer> getCandidates(int[][] grid, int positionRow, int positionColumn) {
+        ArrayList<Integer> candidates = new ArrayList<>();
+        for (int i = 1; i <= 9; i++) {
+            candidates.add(i);
+        }
+
+        // Remove all values from row from candidates
+        for (int x = 0; x < grid.length; x++) {
+            if (candidates.contains(grid[x][positionColumn])) {
+                candidates.remove(Integer.valueOf(grid[x][positionColumn]));
+            }
+        }
+
+        // Remove all values from column from candidates
+        for (int y = 0; y < grid[positionRow].length; y++) {
+            if (candidates.contains(grid[positionRow][y])) {
+                candidates.remove(Integer.valueOf(grid[positionRow][y]));
+            }
+        }
+
+        // Remove all values from square from candidates
+        int startSquareX = positionRow - (positionRow % 3);
+        int startSquareY = positionColumn - (positionColumn % 3);
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                int currentX = startSquareX + x;
+                int currentY = startSquareY + y;
+                if (candidates.contains(grid[currentX][currentY])) {
+                    candidates.remove(Integer.valueOf(grid[currentX][currentY]));
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    public void solveUsingForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                // If the number at this point is not set yet, get possible candidates (forward checking) and try
+                if (grid[x][y] == 0) {
+                    for (Integer guess : getCandidates(grid, x, y)) {
+                            grid[x][y] = guess;
+                            solveUsingBacktracking(grid, solutions);
+                            // Use backtracking if the choice was bad: reset the value and try again
+                            grid[x][y] = 0;
                     }
                     // If all possibilities were checked, and none of them worked we are at a dead end and return
                     return;
