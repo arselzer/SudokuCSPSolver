@@ -24,10 +24,12 @@ public class CSPSolver {
         //solveUsingBacktracking(sudokuGrid, solutions);
         //solveUsingForwardChecking(sudokuGrid, solutions);
 
-        LinkedHashMap<Integer, Integer> a = getListOfMostConstraintVariablesOrdered(sudokuGrid);
-        System.out.println(a.toString());
-        updateConstraints(a, 8, 7, -1);
-        System.out.println(a.toString());
+        solveUsingForwardCheckingDynamicallyOrdered(sudokuGrid, solutions);
+
+        //LinkedHashMap<Integer, Integer> a = getListOfMostConstraintVariablesOrdered(sudokuGrid);
+        //System.out.println(a.toString());
+        //updateConstraints(a, 8, 7, -1);
+        //System.out.println(a.toString());
 
         for (int[][] s : solutions) {
             printSudokuGrid(s);
@@ -297,11 +299,81 @@ public class CSPSolver {
 
         return degree;
     }
-    
+
+    private LinkedHashMap<Integer, Integer> updateValuesOrderedByPossibility(LinkedHashMap<Integer, Integer> values, int value, int change) {
+        values.replace(value, values.get(value)+change);
+
+        LinkedHashMap<Integer, Integer> result = values.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey, Map.Entry::getValue,
+                        (x, y) -> x,
+                        LinkedHashMap::new
+                ));
+        values = result;
+        return values;
+    }
+
+    private LinkedHashMap<Integer, Integer> getValuesOrderedByPossibility(int[][] grid) {
+        HashMap<Integer, Integer> values = new HashMap<>();
+        for (int i = 1; i < 10; i++) {
+            values.put(i, 0);
+        }
+
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[0].length; y++) {
+                if (grid[x][y] != 0) {
+                    values.replace(grid[x][y], values.get(grid[x][y])+1);
+                }
+            }
+        }
+
+        LinkedHashMap<Integer, Integer> result = values.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey, Map.Entry::getValue,
+                        (x, y) -> x,
+                        LinkedHashMap::new
+                ));
+        return result;
+    }
+
+    private int[] convertAbsoluteGridPositionToXandYCoordinate(int absolute) {
+        return new int[]{absolute/9,absolute % 9};
+    }
+
     public void solveUsingForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
 
-        getListOfMostConstraintVariablesOrdered(grid);
-        //TODO: implement this
+        LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
+        LinkedHashMap<Integer, Integer> values = getValuesOrderedByPossibility(grid); // {3=2, 5=2, 1=3, 2=3, 6=3, 7=3, 8=3, 4=5, 9=6}
+
+        for (Map.Entry<Integer, Integer> entry : getListOfMostConstraintVariablesOrdered(grid).entrySet()) {
+            Integer key = entry.getKey();
+            int posX = convertAbsoluteGridPositionToXandYCoordinate(key)[0];
+            int posY = convertAbsoluteGridPositionToXandYCoordinate(key)[1];
+            // If the number at this point is not set yet, get most probable candidate (dynamic forward checking) and try
+            if (grid[posX][posY] == 0) {
+                for (Map.Entry<Integer, Integer> entry1 : values.entrySet()) {
+                    Integer k = entry1.getKey();
+                    if (!isPossible(grid, posX, posY, k)) {
+                        continue;
+                    }
+                    grid[posX][posY] = k;
+                    updateValuesOrderedByPossibility(values, k, +1);
+                    updateConstraints(constraints, posX, posY, -1);
+                    solveUsingForwardCheckingDynamicallyOrdered(grid, solutions);
+                    // Use backtracking if the choice was bad: reset the value and try again
+                    grid[posX][posY] = 0;
+                    updateValuesOrderedByPossibility(values, k, -1);
+                    updateConstraints(constraints, posX, posY, +1);
+                };
+                // If all possibilities were checked, and none of them worked we are at a dead end and return
+                return;
+            }
+
+        }
+        solutions.add(getCopyOfSudokuGrid(grid));
+        //printSudokuGrid(grid);
     }
 
     public void solve() {
@@ -311,4 +383,6 @@ public class CSPSolver {
     public Instance getInstance() {
         return instance;
     }
+
+
 }
