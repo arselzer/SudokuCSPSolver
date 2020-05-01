@@ -1,4 +1,5 @@
 import constraint.Constraint;
+import variable.Variable;
 
 import java.io.File;
 import java.util.*;
@@ -11,6 +12,7 @@ import static java.util.Collections.reverseOrder;
 public class SudokuCSPSolver implements ICSPSolver {
     Instance instance;
     File cspFile;
+    private int gridLength = 9;
 
     public SudokuCSPSolver(File cspFile) throws Exception {
         this.cspFile = cspFile;
@@ -120,7 +122,22 @@ public class SudokuCSPSolver implements ICSPSolver {
     }
 
     private int[][] getSudokuGridFromInstance(Instance instance) {
-        int grid[][] = new int[9][9];
+        Pattern arrayIndexPattern = Pattern.compile("\\[(\\d+)\\]\\[\\d+\\]");
+        int max = 0;
+        for (Variable var : instance.getVariables()) {
+            Matcher m = arrayIndexPattern.matcher(var.getId());
+
+            if (m.find()) {
+                int index = Integer.parseInt(m.group(1));
+                if (index > max) {
+                    max = index;
+                }
+            }
+        }
+
+        gridLength = max + 1;
+
+        int grid[][] = new int[gridLength][gridLength];
 
         for (Constraint v : instance.getConstraints()) {
             if (v.toString().contains("FIXED")) {
@@ -132,7 +149,7 @@ public class SudokuCSPSolver implements ICSPSolver {
     }
 
     private int[] getSudokuValueFromPosition(String constraint) {
-        Pattern pattern = Pattern.compile("FIXED \\(x\\[([0-9])\\]\\[([0-9])\\] = ([0-9])\\)");
+        Pattern pattern = Pattern.compile("FIXED \\(x\\[(\\d+)\\]\\[(\\d+)\\] = (\\d+)\\)");
         Matcher matcher = pattern.matcher(constraint);
         if (matcher.find()) {
             return new int[]{Integer.parseInt(matcher.group(1)),
@@ -190,7 +207,7 @@ public class SudokuCSPSolver implements ICSPSolver {
                 for (int y = 0; y < grid[x].length; y++) {
                     // If the number at this point is not set yet, make a guess and check if it is possible
                     if (grid[x][y] == 0) {
-                        for (int guess = 1; guess < 10; guess++) {
+                        for (int guess = 1; guess < gridLength+1; guess++) {
                             if (isPossible(grid, x, y, guess)) {
                                 grid[x][y] = guess;
                                 runBacktracking(grid, solutions);
@@ -210,7 +227,7 @@ public class SudokuCSPSolver implements ICSPSolver {
 
     private ArrayList<Integer> getCandidates(int[][] grid, int positionRow, int positionColumn) {
         ArrayList<Integer> candidates = new ArrayList<>();
-        for (int i = 1; i <= 9; i++) {
+        for (int i = 1; i <= gridLength; i++) {
             candidates.add(i);
         }
 
@@ -252,7 +269,7 @@ public class SudokuCSPSolver implements ICSPSolver {
                     if (grid[x][y] == 0) {
                         for (Integer guess : getCandidates(grid, x, y)) {
                             grid[x][y] = guess;
-                            runBacktracking(grid, solutions);
+                            runForwardChecking(grid, solutions);
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                         }
@@ -273,7 +290,7 @@ public class SudokuCSPSolver implements ICSPSolver {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
                 if (grid[x][y] == 0) {
-                    constraintVariables.put(x*9+y, getDegreeOfConstraint(grid, x, y));
+                    constraintVariables.put(x*gridLength+y, getDegreeOfConstraint(grid, x, y));
                 }
             }
         }
@@ -293,16 +310,16 @@ public class SudokuCSPSolver implements ICSPSolver {
     // -1 when variable is set and +1 when variable is reset to 0
     private void updateConstraints(LinkedHashMap<Integer, Integer> constraints, int positionRow, int positionColumn, int change) {
         // Update all values for row
-        for (int x = 0; x < 9; x++) {
-            int key = x*9+positionColumn;
+        for (int x = 0; x < gridLength; x++) {
+            int key = x*gridLength+positionColumn;
             if (constraints.containsKey(key)) {
                 constraints.replace(key, constraints.get(key)+change);
             }
         }
 
         // Update all values for column
-        for (int y = 0; y < 9; y++) {
-            int key = positionRow*9+y;
+        for (int y = 0; y < gridLength; y++) {
+            int key = positionRow*gridLength+y;
             if (constraints.containsKey(key)) {
                 constraints.replace(key, constraints.get(key) + change);
             }
@@ -315,7 +332,7 @@ public class SudokuCSPSolver implements ICSPSolver {
             for (int y = 0; y < 3; y++) {
                 int currentX = startSquareX + x;
                 int currentY = startSquareY + y;
-                int key = currentX*9+currentY;
+                int key = currentX*gridLength+currentY;
                 if (constraints.containsKey(key)) {
                     constraints.replace(key, constraints.get(key), constraints.get(key) + change);
                 }
@@ -373,7 +390,7 @@ public class SudokuCSPSolver implements ICSPSolver {
 
     private LinkedHashMap<Integer, Integer> getValuesOrderedByPossibility(int[][] grid) {
         HashMap<Integer, Integer> values = new HashMap<>();
-        for (int i = 1; i < 10; i++) {
+        for (int i = 1; i < gridLength+1; i++) {
             values.put(i, 0);
         }
 
@@ -396,7 +413,7 @@ public class SudokuCSPSolver implements ICSPSolver {
     }
 
     private int[] convertAbsoluteGridPositionToXandYCoordinate(int absolute) {
-        return new int[]{absolute/9,absolute % 9};
+        return new int[]{absolute/gridLength,absolute % gridLength};
     }
 
     public void runForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
