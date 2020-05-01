@@ -13,6 +13,20 @@ public class Instance {
         this.constraints = constraints;
     }
 
+    public boolean isComplete() {
+        return variables.stream()
+                .allMatch(variable -> variable.getAssignment() != null);
+    }
+
+    public boolean isConsistent() {
+        return constraints.stream()
+                .allMatch(Constraint::isConsistent);
+    }
+
+    public boolean isCorrect() {
+        return isComplete() && isConsistent();
+    }
+
     public Set<Variable> getVariables() {
         return variables;
     }

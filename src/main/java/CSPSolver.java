@@ -436,6 +436,4 @@ public class CSPSolver implements ICSPSolver {
     public Instance getInstance() {
         return instance;
     }
-
-
 }
