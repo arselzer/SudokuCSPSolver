@@ -1,43 +1,96 @@
 import constraint.Constraint;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import static java.util.Collections.reverseOrder;
 
-public class CSPSolver {
+//TODO: Completely remove solutionLists
+public class CSPSolver implements ICSPSolver {
     Instance instance;
+    File cspFile;
 
-    public CSPSolver(Path cspFile) throws Exception {
+    public CSPSolver(File cspFile) throws Exception {
+        this.cspFile = cspFile;
         XCSPReader reader = new XCSPReader(cspFile.toString());
-
         instance = reader.getProblemInstance();
+    }
 
+    @Override
+    public void solveUsingBacktracking(boolean verbose) {
         int [][] sudokuGrid = getSudokuGridFromInstance(instance);
-
-        printSudokuGrid(sudokuGrid);
-
         ArrayList<int[][]> solutions = new ArrayList<>();
-
-        //solveUsingBacktracking(sudokuGrid, solutions);
-        //solveUsingForwardChecking(sudokuGrid, solutions);
-
-        solveUsingForwardCheckingDynamicallyOrdered(sudokuGrid, solutions);
-
-        //LinkedHashMap<Integer, Integer> a = getListOfMostConstraintVariablesOrdered(sudokuGrid);
-        //System.out.println(a.toString());
-        //updateConstraints(a, 8, 7, -1);
-        //System.out.println(a.toString());
-
-        for (int[][] s : solutions) {
-            printSudokuGrid(s);
+        if(verbose){
+            System.out.print("Running solver using Backtracking\nInput problem:\n");
+            printSudokuGrid(sudokuGrid);
+            runBacktracking(sudokuGrid,solutions);
+            System.out.println("Solutions:");
+            for (int[][] s : solutions) {
+                printSudokuGrid(s);
+            }
+        }else {
+            runBacktracking(sudokuGrid, solutions);
         }
+    }
 
-//        for (Constraint c : instance.getConstraints()) {
-//            System.out.println(c);
-//        }
+    @Override
+    public void solveUsingForwardChecking(boolean verbose) {
+        int [][] sudokuGrid = getSudokuGridFromInstance(instance);
+        ArrayList<int[][]> solutions = new ArrayList<>();
+        if(verbose){
+            System.out.print("Running solver using Forward Checking\nInput problem:\n");
+            printSudokuGrid(sudokuGrid);
+            runForwardChecking(sudokuGrid,solutions);
+            System.out.println("Solutions:");
+            for (int[][] s : solutions) {
+                printSudokuGrid(s);
+            }
+        }else {
+            runForwardChecking(sudokuGrid, solutions);
+        }
+    }
+
+    @Override
+    public void solveUsingForwardCheckingDynamicallyOrdered(boolean verbose) {
+        int [][] sudokuGrid = getSudokuGridFromInstance(instance);
+        ArrayList<int[][]> solutions = new ArrayList<>();
+        if(verbose){
+            System.out.print("Running solver using Forward Checking and Dynamic Ordering\nInput problem:\n");
+            printSudokuGrid(sudokuGrid);
+            runForwardCheckingDynamicallyOrdered(sudokuGrid,solutions);
+            System.out.println("Solutions:");
+            for (int[][] s : solutions) {
+                printSudokuGrid(s);
+            }
+        }else {
+            runForwardCheckingDynamicallyOrdered(sudokuGrid, solutions);
+        }
+    }
+
+    @Override
+    public void benchmark() {
+        int [][] sudokuGrid = getSudokuGridFromInstance(instance);
+        LinkedList<int[][]> solutions = new LinkedList<>();
+
+        long start = System.nanoTime();
+        solveUsingBacktracking(false);
+        long stop = System.nanoTime();
+        long backTrackingMs = (stop - start) / 1000000;
+
+        start = System.nanoTime();
+        solveUsingForwardChecking(false);
+        stop = System.nanoTime();
+        long forwardCheckingMs = (stop - start) / 1000000;
+
+        start = System.nanoTime();
+        solveUsingForwardCheckingDynamicallyOrdered(false);
+        stop = System.nanoTime();
+        long FCDOMs = (stop - start) / 1000000;
+
+        System.out.printf("%s,%d,%d,%d\n", cspFile.getName(),backTrackingMs,forwardCheckingMs,FCDOMs);
+
     }
 
     private void printSudokuGrid(int[][] grid) {
@@ -131,7 +184,7 @@ public class CSPSolver {
         return copy;
     }
 
-    public void solveUsingBacktracking(int[][] grid, ArrayList<int[][]> solutions) {
+    public void runBacktracking(int[][] grid, ArrayList<int[][]> solutions) {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
                 // If the number at this point is not set yet, make a guess and check if it is possible
@@ -139,7 +192,7 @@ public class CSPSolver {
                     for (int guess = 1; guess < 10; guess++) {
                         if (isPossible(grid, x, y, guess)) {
                             grid[x][y] = guess;
-                            solveUsingBacktracking(grid, solutions);
+                            runBacktracking(grid, solutions);
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                         }
@@ -189,14 +242,14 @@ public class CSPSolver {
         return candidates;
     }
 
-    public void solveUsingForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
+    public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
                 // If the number at this point is not set yet, get possible candidates (forward checking) and try
                 if (grid[x][y] == 0) {
                     for (Integer guess : getCandidates(grid, x, y)) {
                             grid[x][y] = guess;
-                            solveUsingBacktracking(grid, solutions);
+                            runBacktracking(grid, solutions);
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                     }
@@ -342,7 +395,7 @@ public class CSPSolver {
         return new int[]{absolute/9,absolute % 9};
     }
 
-    public void solveUsingForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
+    public void runForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
 
         LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
         LinkedHashMap<Integer, Integer> values = getValuesOrderedByPossibility(grid); // {3=2, 5=2, 1=3, 2=3, 6=3, 7=3, 8=3, 4=5, 9=6}
@@ -361,7 +414,7 @@ public class CSPSolver {
                     grid[posX][posY] = k;
                     updateValuesOrderedByPossibility(values, k, +1);
                     updateConstraints(constraints, posX, posY, -1);
-                    solveUsingForwardCheckingDynamicallyOrdered(grid, solutions);
+                    runForwardCheckingDynamicallyOrdered(grid, solutions);
                     // Use backtracking if the choice was bad: reset the value and try again
                     grid[posX][posY] = 0;
                     updateValuesOrderedByPossibility(values, k, -1);
