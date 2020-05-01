@@ -60,7 +60,7 @@ public class Main {
 
         if(cli.getOptions().length == 2 && cli.hasOption("instance") && cli.hasOption("method")) {
             String filePath = cli.getOptionValue("instance");
-            ICSPSolver solver = new CSPSolver(new File(filePath));
+            ICSPSolver solver = new SudokuCSPSolver(new File(filePath));
 
             String method = cli.getOptionValue("method");
             switch (method) {
@@ -87,7 +87,7 @@ public class Main {
                 System.out.println("file_name,backtracking_ms,forward_checking_ms,FC_DO_ms");
                 for (File file : files) {
                     if(file != null && file.isFile()) {
-                        ICSPSolver solver = new CSPSolver(file);
+                        ICSPSolver solver = new SudokuCSPSolver(file);
                         solver.benchmark();
                     }
                 }

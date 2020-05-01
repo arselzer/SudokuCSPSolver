@@ -8,11 +8,11 @@ import java.util.stream.Collectors;
 import static java.util.Collections.reverseOrder;
 
 //TODO: Completely remove solutionLists
-public class CSPSolver implements ICSPSolver {
+public class SudokuCSPSolver implements ICSPSolver {
     Instance instance;
     File cspFile;
 
-    public CSPSolver(File cspFile) throws Exception {
+    public SudokuCSPSolver(File cspFile) throws Exception {
         this.cspFile = cspFile;
         XCSPReader reader = new XCSPReader(cspFile.toString());
         instance = reader.getProblemInstance();
@@ -185,24 +185,26 @@ public class CSPSolver implements ICSPSolver {
     }
 
     public void runBacktracking(int[][] grid, ArrayList<int[][]> solutions) {
-        for (int x = 0; x < grid.length; x++) {
-            for (int y = 0; y < grid[x].length; y++) {
-                // If the number at this point is not set yet, make a guess and check if it is possible
-                if (grid[x][y] == 0) {
-                    for (int guess = 1; guess < 10; guess++) {
-                        if (isPossible(grid, x, y, guess)) {
-                            grid[x][y] = guess;
-                            runBacktracking(grid, solutions);
-                            // Use backtracking if the choice was bad: reset the value and try again
-                            grid[x][y] = 0;
+        if (solutions.size() < 1) {
+            for (int x = 0; x < grid.length; x++) {
+                for (int y = 0; y < grid[x].length; y++) {
+                    // If the number at this point is not set yet, make a guess and check if it is possible
+                    if (grid[x][y] == 0) {
+                        for (int guess = 1; guess < 10; guess++) {
+                            if (isPossible(grid, x, y, guess)) {
+                                grid[x][y] = guess;
+                                runBacktracking(grid, solutions);
+                                // Use backtracking if the choice was bad: reset the value and try again
+                                grid[x][y] = 0;
+                            }
                         }
+                        // If all possibilities were checked, and none of them worked we are at a dead end and return
+                        return;
                     }
-                    // If all possibilities were checked, and none of them worked we are at a dead end and return
-                    return;
                 }
             }
+            solutions.add(getCopyOfSudokuGrid(grid));
         }
-        solutions.add(getCopyOfSudokuGrid(grid));
         //printSudokuGrid(grid);
     }
 
@@ -243,22 +245,24 @@ public class CSPSolver implements ICSPSolver {
     }
 
     public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
-        for (int x = 0; x < grid.length; x++) {
-            for (int y = 0; y < grid[x].length; y++) {
-                // If the number at this point is not set yet, get possible candidates (forward checking) and try
-                if (grid[x][y] == 0) {
-                    for (Integer guess : getCandidates(grid, x, y)) {
+        if (solutions.size() < 1) {
+            for (int x = 0; x < grid.length; x++) {
+                for (int y = 0; y < grid[x].length; y++) {
+                    // If the number at this point is not set yet, get possible candidates (forward checking) and try
+                    if (grid[x][y] == 0) {
+                        for (Integer guess : getCandidates(grid, x, y)) {
                             grid[x][y] = guess;
                             runBacktracking(grid, solutions);
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
+                        }
+                        // If all possibilities were checked, and none of them worked we are at a dead end and return
+                        return;
                     }
-                    // If all possibilities were checked, and none of them worked we are at a dead end and return
-                    return;
                 }
             }
+            solutions.add(getCopyOfSudokuGrid(grid));
         }
-        solutions.add(getCopyOfSudokuGrid(grid));
         //printSudokuGrid(grid);
     }
 
@@ -396,36 +400,39 @@ public class CSPSolver implements ICSPSolver {
     }
 
     public void runForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
+        if (solutions.size() < 1) {
 
-        LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
-        LinkedHashMap<Integer, Integer> values = getValuesOrderedByPossibility(grid); // {3=2, 5=2, 1=3, 2=3, 6=3, 7=3, 8=3, 4=5, 9=6}
+            LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
+            LinkedHashMap<Integer, Integer> values = getValuesOrderedByPossibility(grid); // {3=2, 5=2, 1=3, 2=3, 6=3, 7=3, 8=3, 4=5, 9=6}
 
-        for (Map.Entry<Integer, Integer> entry : getListOfMostConstraintVariablesOrdered(grid).entrySet()) {
-            Integer key = entry.getKey();
-            int posX = convertAbsoluteGridPositionToXandYCoordinate(key)[0];
-            int posY = convertAbsoluteGridPositionToXandYCoordinate(key)[1];
-            // If the number at this point is not set yet, get most probable candidate (dynamic forward checking) and try
-            if (grid[posX][posY] == 0) {
-                for (Map.Entry<Integer, Integer> entry1 : values.entrySet()) {
-                    Integer k = entry1.getKey();
-                    if (!isPossible(grid, posX, posY, k)) {
-                        continue;
+            for (Map.Entry<Integer, Integer> entry : getListOfMostConstraintVariablesOrdered(grid).entrySet()) {
+                Integer key = entry.getKey();
+                int posX = convertAbsoluteGridPositionToXandYCoordinate(key)[0];
+                int posY = convertAbsoluteGridPositionToXandYCoordinate(key)[1];
+                // If the number at this point is not set yet, get most probable candidate (dynamic forward checking) and try
+                if (grid[posX][posY] == 0) {
+                    for (Map.Entry<Integer, Integer> entry1 : values.entrySet()) {
+                        Integer k = entry1.getKey();
+                        if (!isPossible(grid, posX, posY, k)) {
+                            continue;
+                        }
+                        grid[posX][posY] = k;
+                        updateValuesOrderedByPossibility(values, k, +1);
+                        updateConstraints(constraints, posX, posY, -1);
+                        runForwardCheckingDynamicallyOrdered(grid, solutions);
+                        // Use backtracking if the choice was bad: reset the value and try again
+                        grid[posX][posY] = 0;
+                        updateValuesOrderedByPossibility(values, k, -1);
+                        updateConstraints(constraints, posX, posY, +1);
                     }
-                    grid[posX][posY] = k;
-                    updateValuesOrderedByPossibility(values, k, +1);
-                    updateConstraints(constraints, posX, posY, -1);
-                    runForwardCheckingDynamicallyOrdered(grid, solutions);
-                    // Use backtracking if the choice was bad: reset the value and try again
-                    grid[posX][posY] = 0;
-                    updateValuesOrderedByPossibility(values, k, -1);
-                    updateConstraints(constraints, posX, posY, +1);
-                };
-                // If all possibilities were checked, and none of them worked we are at a dead end and return
-                return;
-            }
+                    ;
+                    // If all possibilities were checked, and none of them worked we are at a dead end and return
+                    return;
+                }
 
+            }
+            solutions.add(getCopyOfSudokuGrid(grid));
         }
-        solutions.add(getCopyOfSudokuGrid(grid));
         //printSudokuGrid(grid);
     }
 

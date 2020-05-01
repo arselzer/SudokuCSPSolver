@@ -11,12 +11,21 @@ public class Variable {
         this.id = id;
     }
 
+    public Variable(String id, Integer assignment) {
+        this.id = id;
+        this.assignment = assignment;
+    }
+
     public String getId() {
         return id;
     }
 
     public Integer getAssignment() {
         return assignment;
+    }
+
+    public void setAssignment(Integer value) {
+        this.assignment = value;
     }
 
     @Override

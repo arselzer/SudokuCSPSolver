@@ -6,9 +6,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * In our case, constraint.Constraint is an alldiff constraint
- */
 public class AlldiffConstraint implements Constraint {
     private Set<Variable> variables;
 

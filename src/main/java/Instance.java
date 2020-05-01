@@ -1,6 +1,7 @@
 import constraint.Constraint;
 import variable.Variable;
 
+import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,22 @@ public class Instance {
 
     public boolean isCorrect() {
         return isComplete() && isConsistent();
+    }
+
+    public VariableAssignment getVariableAssignment() {
+        HashMap<String, Integer> assignmentMap = new HashMap<>();
+
+        for (Variable variable : variables) {
+            assignmentMap.put(variable.getId(), variable.getAssignment());
+        }
+
+        return new VariableAssignment(assignmentMap);
+    }
+
+    public void setVariableAssignment(VariableAssignment variableAssignment) {
+        for (Variable variable : variables) {
+            variable.setAssignment(variableAssignment.getValue(variable.getId()));
+        }
     }
 
     public Set<Variable> getVariables() {
