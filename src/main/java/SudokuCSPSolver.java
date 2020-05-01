@@ -40,17 +40,19 @@ public class SudokuCSPSolver implements ICSPSolver {
     @Override
     public void solveUsingForwardChecking(boolean verbose) {
         int [][] sudokuGrid = getSudokuGridFromInstance(instance);
+        Set<Integer>[][] candidates = initCandidates(sudokuGrid);
+
         ArrayList<int[][]> solutions = new ArrayList<>();
         if(verbose){
             System.out.print("Running solver using Forward Checking\nInput problem:\n");
             printSudokuGrid(sudokuGrid);
-            runForwardChecking(sudokuGrid,solutions);
+            runForwardChecking(sudokuGrid,solutions, candidates);
             System.out.println("Solutions:");
             for (int[][] s : solutions) {
                 printSudokuGrid(s);
             }
         }else {
-            runForwardChecking(sudokuGrid, solutions);
+            runForwardChecking(sudokuGrid, solutions, candidates);
         }
     }
 
@@ -225,8 +227,51 @@ public class SudokuCSPSolver implements ICSPSolver {
         //printSudokuGrid(grid);
     }
 
+    private Set<Integer>[][] initCandidates(int[][] grid) {
+        Set<Integer>[][] candidates = new Set[gridLength][gridLength];
+
+        List<Integer> sudokuValues = new LinkedList<>();
+        for (int i = 1; i <= gridLength; i++) {
+            sudokuValues.add(i);
+        }
+
+        for (int x = 0; x < gridLength; x++) {
+            for (int y = 0; y < gridLength; y++) {
+                candidates[x][y] = new HashSet<>(sudokuValues);
+            }
+        }
+
+        for (int x = 0; x < gridLength; x++) {
+            for (int y = 0; y < gridLength; y++) {
+                int value = grid[x][y];
+
+                if (value != 0) {
+                    for (int i = 0; i < gridLength; i++) {
+                        candidates[x][i].remove(value);
+                    }
+
+                    for (int i = 0; i < gridLength; i++) {
+                        candidates[i][y].remove(value);
+                    }
+
+                    int startSquareX = x - (x % 3);
+                    int startSquareY = y - (y % 3);
+                    for (int r = 0; r < 3; r++) {
+                        for (int c = 0; c < 3; c++) {
+                            int currentX = startSquareX + r;
+                            int currentY = startSquareY + c;
+                            candidates[currentX][currentY].remove(value);
+                        }
+                    }
+                }
+            }
+        }
+
+        return candidates;
+    }
+
     private ArrayList<Integer> getCandidates(int[][] grid, int positionRow, int positionColumn) {
-        ArrayList<Integer> candidates = new ArrayList<>();
+        ArrayList<Integer> candidates = new ArrayList<>(gridLength);
         for (int i = 1; i <= gridLength; i++) {
             candidates.add(i);
         }
@@ -261,15 +306,15 @@ public class SudokuCSPSolver implements ICSPSolver {
         return candidates;
     }
 
-    public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
+    public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions, Set<Integer>[][] candidates) {
         if (solutions.size() < 1) {
             for (int x = 0; x < grid.length; x++) {
                 for (int y = 0; y < grid[x].length; y++) {
                     // If the number at this point is not set yet, get possible candidates (forward checking) and try
                     if (grid[x][y] == 0) {
-                        for (Integer guess : getCandidates(grid, x, y)) {
+                        for (Integer guess : candidates[x][y]) {
                             grid[x][y] = guess;
-                            runForwardChecking(grid, solutions);
+                            runForwardChecking(grid, solutions, candidates);
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                         }
