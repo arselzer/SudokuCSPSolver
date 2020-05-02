@@ -8,11 +8,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import static java.util.Collections.reverseOrder;
 
-//TODO: Completely remove solutionLists
 public class SudokuCSPSolver implements ICSPSolver {
     Instance instance;
     File cspFile;
     private int gridLength = 9;
+
+    private Set<Integer>[][] originalCandidates;
+    private Set<Integer>[][] currentCandidates;
 
     public SudokuCSPSolver(File cspFile) throws Exception {
         this.cspFile = cspFile;
@@ -32,7 +34,7 @@ public class SudokuCSPSolver implements ICSPSolver {
             for (int[][] s : solutions) {
                 printSudokuGrid(s);
             }
-        }else {
+        } else {
             runBacktracking(sudokuGrid, solutions);
         }
     }
@@ -40,19 +42,20 @@ public class SudokuCSPSolver implements ICSPSolver {
     @Override
     public void solveUsingForwardChecking(boolean verbose) {
         int [][] sudokuGrid = getSudokuGridFromInstance(instance);
-        Set<Integer>[][] candidates = initCandidates(sudokuGrid);
+        originalCandidates = initCandidates(sudokuGrid);
+        currentCandidates = copyCandidates(originalCandidates);
 
         ArrayList<int[][]> solutions = new ArrayList<>();
         if(verbose){
             System.out.print("Running solver using Forward Checking\nInput problem:\n");
             printSudokuGrid(sudokuGrid);
-            runForwardChecking(sudokuGrid,solutions, candidates);
+            runForwardChecking(sudokuGrid,solutions);
             System.out.println("Solutions:");
             for (int[][] s : solutions) {
                 printSudokuGrid(s);
             }
-        }else {
-            runForwardChecking(sudokuGrid, solutions, candidates);
+        } else {
+            runForwardChecking(sudokuGrid, solutions);
         }
     }
 
@@ -270,51 +273,62 @@ public class SudokuCSPSolver implements ICSPSolver {
         return candidates;
     }
 
-    private ArrayList<Integer> getCandidates(int[][] grid, int positionRow, int positionColumn) {
-        ArrayList<Integer> candidates = new ArrayList<>(gridLength);
-        for (int i = 1; i <= gridLength; i++) {
-            candidates.add(i);
+    private Set[][] copyCandidates(Set<Integer>[][] candidates) {
+        Set<Integer>[][] candidatesCopy = new Set[gridLength][gridLength];
+
+        for (int x = 0; x < gridLength; x++) {
+            for (int y = 0; y < gridLength; y++) {
+                candidatesCopy[x][y] = new HashSet<>(candidates[x][y]);
+            }
         }
 
-        // Remove all values from row from candidates
-        for (int x = 0; x < grid.length; x++) {
-            if (candidates.contains(grid[x][positionColumn])) {
-                candidates.remove(Integer.valueOf(grid[x][positionColumn]));
+        return candidatesCopy;
+    }
+
+    private void resetCandidates() {
+        for (int x = 0; x < gridLength; x++) {
+            for (int y = 0; y < gridLength; y++) {
+                currentCandidates[x][y] = new HashSet<>(originalCandidates[x][y]);
             }
+        }
+    }
+
+    private void updateCandidates(Set<Integer>[][] candidates, int row, int col, int value) {
+        for (int x = 0; x < gridLength; x++) {
+            candidates[x][col].remove(value);
         }
 
         // Remove all values from column from candidates
-        for (int y = 0; y < grid[positionRow].length; y++) {
-            if (candidates.contains(grid[positionRow][y])) {
-                candidates.remove(Integer.valueOf(grid[positionRow][y]));
-            }
+        for (int y = 0; y < gridLength; y++) {
+            candidates[row][y].remove(value);
         }
 
         // Remove all values from square from candidates
-        int startSquareX = positionRow - (positionRow % 3);
-        int startSquareY = positionColumn - (positionColumn % 3);
+        int startSquareX = row - (row % 3);
+        int startSquareY = col - (col % 3);
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
                 int currentX = startSquareX + x;
                 int currentY = startSquareY + y;
-                if (candidates.contains(grid[currentX][currentY])) {
-                    candidates.remove(Integer.valueOf(grid[currentX][currentY]));
-                }
+                candidates[currentX][currentY].remove(value);
             }
         }
-
-        return candidates;
     }
 
-    public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions, Set<Integer>[][] candidates) {
+    public void runForwardChecking(int[][] grid, ArrayList<int[][]> solutions) {
         if (solutions.size() < 1) {
             for (int x = 0; x < grid.length; x++) {
                 for (int y = 0; y < grid[x].length; y++) {
                     // If the number at this point is not set yet, get possible candidates (forward checking) and try
                     if (grid[x][y] == 0) {
-                        for (Integer guess : candidates[x][y]) {
+                        // Prevent ConcurrentModificationException
+                        for (Integer guess : new HashSet<>(currentCandidates[x][y])) {
                             grid[x][y] = guess;
-                            runForwardChecking(grid, solutions, candidates);
+                            //Set<Integer>[][] candidatesCopy = copyCandidates(candidates);
+                            updateCandidates(currentCandidates, x, y, guess);
+
+                            runForwardChecking(grid, solutions);
+                            resetCandidates();
                             // Use backtracking if the choice was bad: reset the value and try again
                             grid[x][y] = 0;
                         }
@@ -325,7 +339,6 @@ public class SudokuCSPSolver implements ICSPSolver {
             }
             solutions.add(getCopyOfSudokuGrid(grid));
         }
-        //printSudokuGrid(grid);
     }
 
     // Returns from max to min ordered list with sudoku field (row*9+column) as key and degree of constraint as value
@@ -496,10 +509,6 @@ public class SudokuCSPSolver implements ICSPSolver {
             solutions.add(getCopyOfSudokuGrid(grid));
         }
         //printSudokuGrid(grid);
-    }
-
-    public void solve() {
-        // TODO
     }
 
     public Instance getInstance() {
