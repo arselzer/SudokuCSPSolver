@@ -62,17 +62,18 @@ public class SudokuCSPSolver implements ICSPSolver {
     @Override
     public void solveUsingForwardCheckingDynamicallyOrdered(boolean verbose) {
         int [][] sudokuGrid = getSudokuGridFromInstance(instance);
+        LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(sudokuGrid);
         ArrayList<int[][]> solutions = new ArrayList<>();
         if(verbose){
             System.out.print("Running solver using Forward Checking and Dynamic Ordering\nInput problem:\n");
             printSudokuGrid(sudokuGrid);
-            runForwardCheckingDynamicallyOrdered(sudokuGrid,solutions);
+            runForwardCheckingDynamicallyOrdered(sudokuGrid,solutions, constraints);
             System.out.println("Solutions:");
             for (int[][] s : solutions) {
                 printSudokuGrid(s);
             }
         }else {
-            runForwardCheckingDynamicallyOrdered(sudokuGrid, solutions);
+            runForwardCheckingDynamicallyOrdered(sudokuGrid, solutions, constraints);
         }
     }
 
@@ -474,13 +475,20 @@ public class SudokuCSPSolver implements ICSPSolver {
         return new int[]{absolute/gridLength,absolute % gridLength};
     }
 
-    public void runForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions) {
+    public void runForwardCheckingDynamicallyOrdered(int[][] grid, ArrayList<int[][]> solutions, LinkedHashMap<Integer, Integer> constraints) {
         if (solutions.size() < 1) {
 
-            LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
+            //LinkedHashMap<Integer, Integer> constraints = getListOfMostConstraintVariablesOrdered(grid); // {9=13, 71=13, 20=12, 60=12, 1=11, 6=11, 17=11, 27=11, 35=11, 39=11, 41=11, 45=11, 53=11, 63=11, 74=11, 79=11,
             LinkedHashMap<Integer, Integer> values = getValuesOrderedByPossibility(grid); // {3=2, 5=2, 1=3, 2=3, 6=3, 7=3, 8=3, 4=5, 9=6}
 
-            for (Map.Entry<Integer, Integer> entry : getListOfMostConstraintVariablesOrdered(grid).entrySet()) {
+            constraints = constraints.entrySet().stream()
+                    .sorted(reverseOrder(Map.Entry.comparingByValue()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey, Map.Entry::getValue,
+                            (x, y) -> x,
+                            LinkedHashMap::new
+                    ));
+            for (Map.Entry<Integer, Integer> entry : new LinkedHashMap<Integer, Integer>(constraints).entrySet()) {
                 Integer key = entry.getKey();
                 int posX = convertAbsoluteGridPositionToXandYCoordinate(key)[0];
                 int posY = convertAbsoluteGridPositionToXandYCoordinate(key)[1];
@@ -493,12 +501,12 @@ public class SudokuCSPSolver implements ICSPSolver {
                         }
                         grid[posX][posY] = k;
                         updateValuesOrderedByPossibility(values, k, +1);
-                        updateConstraints(constraints, posX, posY, -1);
-                        runForwardCheckingDynamicallyOrdered(grid, solutions);
+                        updateConstraints(constraints, posX, posY, +1);
+                        runForwardCheckingDynamicallyOrdered(grid, solutions, constraints);
                         // Use backtracking if the choice was bad: reset the value and try again
                         grid[posX][posY] = 0;
                         updateValuesOrderedByPossibility(values, k, -1);
-                        updateConstraints(constraints, posX, posY, +1);
+                        updateConstraints(constraints, posX, posY, -1);
                     }
                     ;
                     // If all possibilities were checked, and none of them worked we are at a dead end and return
