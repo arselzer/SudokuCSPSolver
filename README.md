@@ -27,7 +27,7 @@ in the given folder. To use it, run:
 
 ## Examples
 
-`java -jar SudokuCSPSolver-1.0-SNAPSHOT.jar --benchmark src/test/resources/Sudoku/ > benchmarkResults.csv`
+`java -jar target/SudokuCSPSolver-1.0-SNAPSHOT.jar --benchmark src/test/resources/sudoku/ > benchmarkResults.csv`
 
 # Sources
 
