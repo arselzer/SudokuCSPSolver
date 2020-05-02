@@ -9,6 +9,9 @@ Julian Vecera 01627770
 To build SudokuCSPSolver, `maven` and `JDK >= v11` is required.
 To run it, `JDK >= v11` is required.
 
+## Build
+To build the jar, execute `mvn package` on Linux/OSX or `maven package` on Windowsö
+
 ## Usage
 The solver offers 2 modes:
 
