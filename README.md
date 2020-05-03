@@ -1,7 +1,7 @@
 # SudokuCSPSolver
 Filip Darmanovic 01527089
 
-Alexandar Selzer 01633655
+Alexander Selzer 01633655
 
 Julian Vecera 01627770 
 
